@@ -1,35 +1,85 @@
 package p
 
 import (
+	"context"
 	"go.uber.org/zap"
 	"log/slog"
 )
 
-func warnings() {
+type User struct {
+	Token string
+}
+
+type CustomStruct struct {
+	APIKey string
+	Secret string
+	Data   string
+}
+
+func testLowercaseRule() {
 	var l *slog.Logger
 	var z *zap.Logger
-	password := "12345"
+	ctx := context.Background()
 
-	// Rule 1: Lowercase
-	l.Info("Starting server")    // want "log message should start with a lowercase letter"
+	// slog
+	l.Info("Starting server")           // want "log message should start with a lowercase letter"
+	l.InfoContext(ctx, "Bad message")   // want "log message should start with a lowercase letter"
+	l.Log(ctx, slog.LevelInfo, "Upper") // want "log message should start with a lowercase letter"
+	slog.Info("Global logger")          // want "log message should start with a lowercase letter"
+
+	// zap
 	z.Error("Failed to connect") // want "log message should start with a lowercase letter"
+	z.DPanic("Panic")            // want "log message should start with a lowercase letter"
 
-	// Rule 2 & 3: English, Special chars & Emoji
+	// ✅ OK
+	l.Info("server started")
+	z.Debug("connection established")
+}
+
+func testCharacterRules() {
+	var l *slog.Logger
+	var z *zap.Logger
+
+	// Rule 2 & 3: English letters, numbers, and spaces only
 	l.Info("запуск сервера") // want "log message should only contain english letters, numbers and spaces"
 	l.Warn("warning!")       // want "log message should only contain english letters, numbers and spaces"
 	l.Info("started 🚀")      // want "log message should only contain english letters, numbers and spaces"
+	l.Info("status: 100%")   // want "log message should only contain english letters, numbers and spaces"
+	l.Info("wait...")        // want "log message should only contain english letters, numbers and spaces"
 
-	// Rule 4: Sensitive Data
-	l.Info("user password " + password) // want "potential sensitive data leak: argument contains 'password'"
+	z.Fatal("Crash!!!") // want "log message should only contain english letters, numbers and spaces"
 
-	type User struct {
-		Token string
-	}
+	// ✅ OK
+	l.Info("server started on port 8080")
+}
+
+func testSensitiveDataRule() {
+	var l *slog.Logger
+	password := "12345"
+	token := "abc"
 	u := User{Token: "abc"}
-	l.Debug("auth " + u.Token) // want "potential sensitive data leak: argument contains 'token'"
+	s := CustomStruct{APIKey: "key", Secret: "shh", Data: "public"}
 
-	// ✅ Correct cases
-	l.Info("server started")
-	z.Debug("connection established")
-	l.Info("token validated") // "token" в строке разрешен, если это не имя переменной/поля (согласно вашему checkLogArg)
+	// Variable name leaks
+	l.Info("user password " + password) // want "potential sensitive data leak: argument contains 'password'"
+	l.Debug("auth " + u.Token)          // want "potential sensitive data leak: argument contains 'token'"
+	l.Debug("auth", u.Token)            // want "potential sensitive data leak: argument contains 'token'"
+
+	// Struct field leaks
+	l.Info("data", s.APIKey) // want "potential sensitive data leak: argument contains 'apikey'"
+	l.Info("data", s.Secret) // want "potential sensitive data leak: argument contains 'secret'"
+
+	// Complex concatenation
+	l.Error("failed with " + "token " + token) // want "potential sensitive data leak: argument contains 'token'"
+
+	// ✅ OK
+	l.Info("token validated") // "token" inside a string literal is fine
+	l.Info("data", s.Data)    // non-sensitive field
+}
+
+func testEdgeCases() {
+	var l *slog.Logger
+
+	// Empty strings should not trigger the lowercase rule (usually len < 1)
+	l.Info("") // ✅ OK
 }
