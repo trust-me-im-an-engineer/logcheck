@@ -135,12 +135,17 @@ func checkNode(n ast.Node, pass *analysis.Pass) {
 		return
 	}
 
-	arg := call.Args[msgPos]
-	checkLogArg(pass, arg)
+	// Check message (rules 1-4)
+	checkLogMsg(pass, call.Args[msgPos])
+
+	// Check log arguments for sensitive names (rule 4)
+	for _, arg := range call.Args[msgPos:] {
+		checkLogArg(pass, arg)
+	}
 }
 
-// checkLogArg inspects one ast Expression applying linter rules
-func checkLogArg(pass *analysis.Pass, expr ast.Expr) {
+// checkLogMsg inspects msg applying linter rules 1-3
+func checkLogMsg(pass *analysis.Pass, expr ast.Expr) {
 	switch e := expr.(type) {
 	case *ast.BasicLit:
 		if e.Kind == token.STRING {
@@ -152,24 +157,39 @@ func checkLogArg(pass *analysis.Pass, expr ast.Expr) {
 			checkMessage(pass, e.Pos(), msg)
 		}
 
-	case *ast.Ident:
-		// Rule 4: Check for sensitive variable names like "password"
-		if i, n := rules.FindSensitiveName(e.Name, sensitiveKeywords); i != -1 {
-			pass.Reportf(e.Pos()+token.Pos(i), "potential sensitive data leak: argument contains '%s'", n)
-		}
-
-	case *ast.SelectorExpr:
-		// Rule 4: Check for sensitive fields like "user.Token"
-		if i, n := rules.FindSensitiveName(e.Sel.Name, sensitiveKeywords); i != -1 {
-			pass.Reportf(e.Pos()+token.Pos(i), "potential sensitive data leak: argument contains '%s'", n)
-		}
-
 	case *ast.BinaryExpr:
 		// Recursively check concatenations
 		if e.Op == token.ADD {
-			checkLogArg(pass, e.X)
-			checkLogArg(pass, e.Y)
+			checkLogMsg(pass, e.X)
+			checkLogMsg(pass, e.Y)
 		}
+	}
+}
+
+// checkLogArg inspects log argument for sensitive names (rule 4)
+func checkLogArg(pass *analysis.Pass, arg ast.Expr) {
+	switch a := arg.(type) {
+	case *ast.Ident:
+		// Rule 4: Check for sensitive variable names like "password"
+		checkIdentSensitiveName(pass, a)
+
+	case *ast.SelectorExpr:
+		// Rule 4: Check for sensitive fields like "user.Token"
+		checkIdentSensitiveName(pass, a.Sel)
+
+	case *ast.BinaryExpr:
+		// Recursively check concatenations
+		if a.Op == token.ADD {
+			checkLogArg(pass, a.X)
+			checkLogArg(pass, a.Y)
+		}
+	}
+}
+
+// checkIdentSensitiveName inspects ident for sensitive naming
+func checkIdentSensitiveName(pass *analysis.Pass, ident *ast.Ident) {
+	if i, n := rules.FindSensitiveName(ident.Name, sensitiveKeywords); i != -1 {
+		pass.Reportf(ident.Pos()+token.Pos(i), "potential sensitive data leak: argument contains '%s'", n)
 	}
 }
 
