@@ -8,6 +8,8 @@ import (
 
 	"golang.org/x/tools/go/analysis"
 	"golang.org/x/tools/go/types/typeutil"
+
+	"logcheck/analyser/rules"
 )
 
 var Analyzer = &analysis.Analyzer{
@@ -152,13 +154,13 @@ func checkLogArg(pass *analysis.Pass, expr ast.Expr) {
 
 	case *ast.Ident:
 		// Rule 4: Check for sensitive variable names like "password"
-		if i, n := indexSensitiveName(e.Name, sensitiveKeywords); i != -1 {
+		if i, n := rules.FindSensitiveName(e.Name, sensitiveKeywords); i != -1 {
 			pass.Reportf(e.Pos()+token.Pos(i), "potential sensitive data leak: argument contains '%s'", n)
 		}
 
 	case *ast.SelectorExpr:
 		// Rule 4: Check for sensitive fields like "user.Token"
-		if i, n := indexSensitiveName(e.Sel.Name, sensitiveKeywords); i != -1 {
+		if i, n := rules.FindSensitiveName(e.Sel.Name, sensitiveKeywords); i != -1 {
 			pass.Reportf(e.Pos()+token.Pos(i), "potential sensitive data leak: argument contains '%s'", n)
 		}
 
@@ -178,12 +180,12 @@ func checkMessage(pass *analysis.Pass, pos token.Pos, msg string) {
 	}
 
 	// Rule 1
-	if !startsWithLowercase(msg) {
+	if !rules.StartsWithLowercase(msg) {
 		pass.Reportf(pos, "log message should start with a lowercase letter")
 	}
 
 	// Rules 2 and 3
-	if i := indexIllegalCharacter(msg); i != -1 {
+	if i := rules.IndexIllegalCharacter(msg); i != -1 {
 		pass.Reportf(pos+token.Pos(i), "log message should only contain english letters, numbers and spaces")
 	}
 }
