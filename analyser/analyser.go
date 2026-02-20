@@ -60,24 +60,6 @@ var watchedLogs = map[string]logRegistry{
 				"Fatal":  0,
 				"Log":    1,
 			},
-			"SugaredLogger": {
-				"Debugw":  0,
-				"Infow":   0,
-				"Warnw":   0,
-				"Errorw":  0,
-				"DPanicw": 0,
-				"Panicw":  0,
-				"Fatalw":  0,
-				"Logw":    1,
-				"Debugf":  0,
-				"Infof":   0,
-				"Warnf":   0,
-				"Errorf":  0,
-				"DPanicf": 0,
-				"Panicf":  0,
-				"Fatalf":  0,
-				"Logf":    1,
-			},
 		},
 	},
 }
@@ -171,5 +153,21 @@ func checkLogArg(pass *analysis.Pass, expr ast.Expr) {
 
 // validateMessage inspects log msg applying linter rules
 func validateMessage(pass *analysis.Pass, pos token.Pos, msg string) {
-	pass.Reportf(pos, "msg")
+	if len(msg) < 1 {
+		return
+	}
+
+	// Rules 2 and 3
+	for i := range msg {
+		b := msg[i]
+		if !((b >= 'a' && b <= 'z') || (b >= 'A' && b <= 'Z') || (b >= '0' && b <= '9') || b == ' ') {
+			pass.Reportf(pos+token.Pos(i), "log message should only contain english letters, numbers and spaces")
+			return
+		}
+	}
+
+	// Rule 1
+	if !(msg[0] >= 'a' && msg[0] <= 'z') {
+		pass.Reportf(pos, "log message should start with a lowercase letter")
+	}
 }
