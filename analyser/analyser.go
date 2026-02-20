@@ -9,7 +9,7 @@ import (
 	"golang.org/x/tools/go/analysis"
 	"golang.org/x/tools/go/types/typeutil"
 
-	"logcheck/analyser/rules"
+	"github.com/trust-me-im-an-engineer/logcheck/analyser/rules"
 )
 
 var Analyzer = &analysis.Analyzer{

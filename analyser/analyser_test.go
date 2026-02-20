@@ -5,7 +5,7 @@ import (
 
 	"golang.org/x/tools/go/analysis/analysistest"
 
-	"logcheck/analyser"
+	"github.com/trust-me-im-an-engineer/logcheck/analyser"
 )
 
 func TestAll(t *testing.T) {
