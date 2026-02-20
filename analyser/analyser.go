@@ -5,7 +5,6 @@ import (
 	"go/token"
 	"go/types"
 	"strconv"
-	"strings"
 
 	"golang.org/x/tools/go/analysis"
 	"golang.org/x/tools/go/types/typeutil"
@@ -63,6 +62,14 @@ var watchedLogs = map[string]logRegistry{
 			},
 		},
 	},
+}
+
+var sensitiveKeywords = map[string]struct{}{
+	"password": {},
+	"token":    {},
+	"apikey":   {},
+	"secret":   {},
+	"key":      {},
 }
 
 func run(pass *analysis.Pass) (interface{}, error) {
@@ -130,7 +137,7 @@ func checkNode(n ast.Node, pass *analysis.Pass) {
 	checkLogArg(pass, arg)
 }
 
-// checkLogArg inspects one ast Expression (presumably a log msg), passing through string literals
+// checkLogArg inspects one ast Expression applying linter rules
 func checkLogArg(pass *analysis.Pass, expr ast.Expr) {
 	switch e := expr.(type) {
 	case *ast.BasicLit:
@@ -145,11 +152,15 @@ func checkLogArg(pass *analysis.Pass, expr ast.Expr) {
 
 	case *ast.Ident:
 		// Rule 4: Check for sensitive variable names like "password"
-		checkSensitiveName(pass, e.Pos(), e.Name)
+		if i, n := indexSensitiveName(e.Name, sensitiveKeywords); i != -1 {
+			pass.Reportf(e.Pos()+token.Pos(i), "potential sensitive data leak: argument contains '%s'", n)
+		}
 
 	case *ast.SelectorExpr:
 		// Rule 4: Check for sensitive fields like "user.Token"
-		checkSensitiveName(pass, e.Pos(), e.Sel.Name)
+		if i, n := indexSensitiveName(e.Sel.Name, sensitiveKeywords); i != -1 {
+			pass.Reportf(e.Pos()+token.Pos(i), "potential sensitive data leak: argument contains '%s'", n)
+		}
 
 	case *ast.BinaryExpr:
 		// Recursively check concatenations
@@ -160,41 +171,19 @@ func checkLogArg(pass *analysis.Pass, expr ast.Expr) {
 	}
 }
 
-// checkMessage inspects log msg applying linter rules
+// checkMessage inspects log msg applying linter rules 1-3.
 func checkMessage(pass *analysis.Pass, pos token.Pos, msg string) {
 	if len(msg) < 1 {
 		return
 	}
 
-	// Rules 2 and 3
-	for i := range msg {
-		b := msg[i]
-		if !((b >= 'a' && b <= 'z') || (b >= 'A' && b <= 'Z') || (b >= '0' && b <= '9') || b == ' ') {
-			pass.Reportf(pos+token.Pos(i), "log message should only contain english letters, numbers and spaces")
-			return
-		}
-	}
-
 	// Rule 1
-	if !(msg[0] >= 'a' && msg[0] <= 'z') {
+	if !startsWithLowercase(msg) {
 		pass.Reportf(pos, "log message should start with a lowercase letter")
 	}
-}
 
-var sensitiveKeywords = map[string]struct{}{
-	"password": {},
-	"token":    {},
-	"apikey":   {},
-	"secret":   {},
-	"key":      {},
-}
-
-func checkSensitiveName(pass *analysis.Pass, pos token.Pos, name string) {
-	lowerName := strings.ToLower(name)
-	for kw := range sensitiveKeywords {
-		if i := strings.Index(lowerName, kw); i != -1 {
-			pass.Reportf(pos+token.Pos(i), "potential sensitive data leak: argument contains '%s'", kw)
-			return
-		}
+	// Rules 2 and 3
+	if i := indexIllegalCharacter(msg); i != -1 {
+		pass.Reportf(pos+token.Pos(i), "log message should only contain english letters, numbers and spaces")
 	}
 }
