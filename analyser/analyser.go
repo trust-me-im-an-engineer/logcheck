@@ -5,6 +5,7 @@ import (
 	"go/token"
 	"go/types"
 	"strconv"
+	"strings"
 
 	"golang.org/x/tools/go/analysis"
 	"golang.org/x/tools/go/types/typeutil"
@@ -142,6 +143,14 @@ func checkLogArg(pass *analysis.Pass, expr ast.Expr) {
 			checkMessage(pass, e.Pos(), msg)
 		}
 
+	case *ast.Ident:
+		// Rule 4: Check for sensitive variable names like "password"
+		checkSensitiveName(pass, e.Pos(), e.Name)
+
+	case *ast.SelectorExpr:
+		// Rule 4: Check for sensitive fields like "user.Token"
+		checkSensitiveName(pass, e.Pos(), e.Sel.Name)
+
 	case *ast.BinaryExpr:
 		// Recursively check concatenations
 		if e.Op == token.ADD {
@@ -169,5 +178,23 @@ func checkMessage(pass *analysis.Pass, pos token.Pos, msg string) {
 	// Rule 1
 	if !(msg[0] >= 'a' && msg[0] <= 'z') {
 		pass.Reportf(pos, "log message should start with a lowercase letter")
+	}
+}
+
+var sensitiveKeywords = map[string]struct{}{
+	"password": {},
+	"token":    {},
+	"apikey":   {},
+	"secret":   {},
+	"key":      {},
+}
+
+func checkSensitiveName(pass *analysis.Pass, pos token.Pos, name string) {
+	lowerName := strings.ToLower(name)
+	for kw := range sensitiveKeywords {
+		if i := strings.Index(lowerName, kw); i != -1 {
+			pass.Reportf(pos+token.Pos(i), "potential sensitive data leak: argument contains '%s'", kw)
+			return
+		}
 	}
 }
