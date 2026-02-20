@@ -85,64 +85,69 @@ var watchedLogs = map[string]logRegistry{
 func run(pass *analysis.Pass) (interface{}, error) {
 	for _, file := range pass.Files {
 		ast.Inspect(file, func(n ast.Node) bool {
-			// Filter Call Expression
-			call, ok := n.(*ast.CallExpr)
-			if !ok {
-				return true
-			}
-
-			// Get fn
-			fn, ok := typeutil.Callee(pass.TypesInfo, call).(*types.Func)
-			if !ok || fn.Pkg() == nil {
-				return true
-			}
-
-			// Filter by package
-			reg, pkgExists := watchedLogs[fn.Pkg().Path()]
-			if !pkgExists {
-				return true
-			}
-
-			// Filter by function or method
-			// Differ between function and method by checking receiver
-			receiver := fn.Type().(*types.Signature).Recv() // it's safe to cast, because fn is *types.Func
-			msgPos := -1
-			if receiver == nil { // Function
-				if pos, exists := reg.functions[fn.Name()]; exists {
-					msgPos = pos
-				}
-			} else { // Method
-				typeName := ""
-				if named, ok := receiver.Type().Underlying().(*types.Pointer); ok {
-					// Pointer receiver
-					if t, ok := named.Elem().(*types.Named); ok {
-						typeName = t.Obj().Name()
-					}
-				} else if t, ok := receiver.Type().(*types.Named); ok {
-					// Value receiver
-					typeName = t.Obj().Name()
-				}
-
-				if typeMethods, exists := reg.methods[typeName]; exists {
-					if pos, exists := typeMethods[fn.Name()]; exists {
-						msgPos = pos
-					}
-				}
-			}
-
-			if msgPos == -1 || len(call.Args) <= msgPos {
-				return true
-			}
-
-			arg := call.Args[msgPos]
-			checkLogArg(pass, arg)
-
+			checkNode(n, pass)
 			return true
 		})
 	}
 	return nil, nil
 }
 
+// checkNode inspects one ast.Node looking for log msg
+func checkNode(n ast.Node, pass *analysis.Pass) {
+	// Filter Call Expression
+	call, ok := n.(*ast.CallExpr)
+	if !ok {
+		return
+	}
+
+	// Get fn
+	fn, ok := typeutil.Callee(pass.TypesInfo, call).(*types.Func)
+	if !ok || fn.Pkg() == nil {
+		return
+	}
+
+	// Filter by package
+	reg, pkgExists := watchedLogs[fn.Pkg().Path()]
+	if !pkgExists {
+		return
+	}
+
+	// Filter by function or method
+	// Differ between function and method by checking receiver
+	receiver := fn.Type().(*types.Signature).Recv() // it's safe to cast, because fn is *types.Func
+	msgPos := -1
+	if receiver == nil { // Function
+		if pos, exists := reg.functions[fn.Name()]; exists {
+			msgPos = pos
+		}
+	} else { // Method
+		typeName := ""
+		if named, ok := receiver.Type().Underlying().(*types.Pointer); ok {
+			// Pointer receiver
+			if t, ok := named.Elem().(*types.Named); ok {
+				typeName = t.Obj().Name()
+			}
+		} else if t, ok := receiver.Type().(*types.Named); ok {
+			// Value receiver
+			typeName = t.Obj().Name()
+		}
+
+		if typeMethods, exists := reg.methods[typeName]; exists {
+			if pos, exists := typeMethods[fn.Name()]; exists {
+				msgPos = pos
+			}
+		}
+	}
+
+	if msgPos == -1 || len(call.Args) <= msgPos {
+		return
+	}
+
+	arg := call.Args[msgPos]
+	checkLogArg(pass, arg)
+}
+
+// checkLogArg inspects one ast Expression (presumably a log msg), passing through string literals
 func checkLogArg(pass *analysis.Pass, expr ast.Expr) {
 	switch e := expr.(type) {
 	case *ast.BasicLit:
@@ -164,6 +169,7 @@ func checkLogArg(pass *analysis.Pass, expr ast.Expr) {
 	}
 }
 
-func validateMessage(pass *analysis.Pass, pos token.Pos, value string) {
+// validateMessage inspects log msg applying linter rules
+func validateMessage(pass *analysis.Pass, pos token.Pos, msg string) {
 	pass.Reportf(pos, "msg")
 }
