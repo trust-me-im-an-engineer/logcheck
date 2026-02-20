@@ -1,4 +1,4 @@
-package plugin
+package main
 
 import (
 	"github.com/golangci/plugin-module-register/register"
