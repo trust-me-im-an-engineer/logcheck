@@ -139,7 +139,7 @@ func checkLogArg(pass *analysis.Pass, expr ast.Expr) {
 				return
 			}
 
-			validateMessage(pass, e.Pos(), msg)
+			checkMessage(pass, e.Pos(), msg)
 		}
 
 	case *ast.BinaryExpr:
@@ -151,8 +151,8 @@ func checkLogArg(pass *analysis.Pass, expr ast.Expr) {
 	}
 }
 
-// validateMessage inspects log msg applying linter rules
-func validateMessage(pass *analysis.Pass, pos token.Pos, msg string) {
+// checkMessage inspects log msg applying linter rules
+func checkMessage(pass *analysis.Pass, pos token.Pos, msg string) {
 	if len(msg) < 1 {
 		return
 	}
