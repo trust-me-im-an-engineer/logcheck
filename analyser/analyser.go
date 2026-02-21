@@ -69,7 +69,6 @@ var watchedLogs = map[string]logRegistry{
 var sensitiveKeywords = map[string]struct{}{
 	"password": {},
 	"token":    {},
-	"apikey":   {},
 	"secret":   {},
 	"key":      {},
 }

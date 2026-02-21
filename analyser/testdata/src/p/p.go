@@ -66,7 +66,7 @@ func testSensitiveDataRule() {
 	l.Debug("auth", u.Token)            // want "potential sensitive data leak: argument contains 'token'"
 
 	// Struct field leaks
-	l.Info("data", s.APIKey) // want "potential sensitive data leak: argument contains 'apikey'"
+	l.Info("data", s.APIKey) // want "potential sensitive data leak: argument contains 'key'"
 	l.Info("data", s.Secret) // want "potential sensitive data leak: argument contains 'secret'"
 
 	// Complex concatenation
