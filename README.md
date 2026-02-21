@@ -82,4 +82,24 @@ go test ./...
 
 #### Кастомные ключевые слова для чувствительных данных
 
-Кастомные ключевые слова можно указать через параметр ```sensitive-keywords``` в разделе ``settings`` в [.golangci.yml](.golangci.yml), либо через флаг ```--sensitive-keywords```. Ключевые слова указываются через запятую.
+Кастомные ключевые слова можно указать через параметр `sensitive-keywords` в разделе `settings` в [.golangci.yml](.golangci.yml), либо через флаг `--sensitive-keywords`. Ключевые слова указываются через запятую.
+
+#### Кастомные логгеры
+
+По умолчанию проверяются `log/slog` и `go.uber.org/zap`. С помощью параметра `watched-logs` в разделе `settings` в [.golangci.yml](.golangci.yml), либо через флаг `--watched-logs` можно добавить кастомные логгеры. Кастомные логгеры указываются json строкой в формате 
+```json
+{
+  "any-logger-package": {
+    "functions": {
+      "LogFunction1": <msg argument position>,
+      "LogFunction2": <msg argument position>
+    },
+    "methods": {
+      "CustomLoggerStruct": {
+        "LogMethod1": <msg argument position>,
+        "LogMethod2": <msg argument position>
+      }
+    }
+  }
+}
+```

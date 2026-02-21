@@ -28,6 +28,12 @@ func New(settings any) (register.LinterPlugin, error) {
 		}
 	}
 
+	if s, ok := s["watched-logs"].(string); ok {
+		if err := analyser.Analyzer.Flags.Set("watched-logs", s); err != nil {
+			return nil, fmt.Errorf("failed to set watched-logs: %w", err)
+		}
+	}
+
 	return &PluginWrapper{}, nil
 }
 

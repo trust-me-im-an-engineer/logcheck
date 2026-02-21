@@ -11,3 +11,17 @@ linters:
         description: Linter for log messages
         settings:
           sensitive-keywords: "password,key,secret,token,customSensitiveKeyword"
+          watched-logs: |
+            {
+              "my-custom-logger": {
+                "functions": {
+                  "Info": 0,
+                  "ErrorCtx": 1
+                },
+                "methods": {
+                  "Logger": {
+                    "Log": 0
+                  }
+                }
+              }
+            }
