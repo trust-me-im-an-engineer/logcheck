@@ -1,6 +1,7 @@
 .env
 .idea/
 .vscode/
+custom-gcl
 
 # Created by https://www.toptal.com/developers/gitignore/api/go,goland
 # Edit at https://www.toptal.com/developers/gitignore?templates=go,goland
