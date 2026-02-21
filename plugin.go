@@ -1,6 +1,8 @@
 package logcheck
 
 import (
+	"fmt"
+
 	"github.com/golangci/plugin-module-register/register"
 	"golang.org/x/tools/go/analysis"
 
@@ -15,6 +17,17 @@ type PluginWrapper struct {
 }
 
 func New(settings any) (register.LinterPlugin, error) {
+	s, ok := settings.(map[string]any)
+	if !ok {
+		return &PluginWrapper{}, nil
+	}
+
+	if val, ok := s["sensitive-keywords"].(string); ok {
+		if err := analyser.Analyzer.Flags.Set("sensitive-keywords", val); err != nil {
+			return nil, fmt.Errorf("failed to set sensitive-keywords: %w", err)
+		}
+	}
+
 	return &PluginWrapper{}, nil
 }
 

@@ -1,6 +1,7 @@
 # logcheck - линтер для проверки лог-записей
 
-Тестовое задание для Selectel выполнено в соответствии с [техническими требованиями](https://tn-eoc.mck2.ru/c/M-UmAAQAAABeS1s1/sqQWBw/h9VzoB3JRdKhvY9j/?u=https%3A%2F%2Ffiles.selectel.ru%2Fdocs%2Fru%2Fbackend_golang_testovoe.pdf%3Futm_source%3Dmindbox_trig%26utm_medium%3Demail%26utm_campaign%3DHR_Career_Wave_confirmation_2026).
+Тестовое задание для Selectel выполнено в соответствии
+с [техническими требованиями](https://tn-eoc.mck2.ru/c/M-UmAAQAAABeS1s1/sqQWBw/h9VzoB3JRdKhvY9j/?u=https%3A%2F%2Ffiles.selectel.ru%2Fdocs%2Fru%2Fbackend_golang_testovoe.pdf%3Futm_source%3Dmindbox_trig%26utm_medium%3Demail%26utm_campaign%3DHR_Career_Wave_confirmation_2026).
 
 ## Установка и использование
 
@@ -8,12 +9,16 @@
 
 ### Плагин для golangci-lint
 
-Чтобы добавить logcheck в качестве плагина для golangci-lint клонировать этот репозиторий не нужно. Нужно собрать golangci-lint с logcheck плагином и включить его.
+Чтобы добавить logcheck в качестве плагина для golangci-lint клонировать этот репозиторий не нужно. Нужно собрать
+golangci-lint с logcheck плагином и включить его.
 
 #### Сборка golangci-lint
-Для сборки нужны установленный golangci-lint актуальной версии (v2.10.1) и [файл конфигурации](.custom-gcl.yml) в текущей директории.
+
+Для сборки нужны установленный golangci-lint актуальной версии (v2.10.1) и [файл конфигурации](.custom-gcl.yml) в
+текущей директории.
 
 Собрать golangci-lint можно командой:
+
 ```bash
 golangci-lint custom
 ```
@@ -28,7 +33,7 @@ golangci-lint custom
 
 ```yml
   enable:
-  - logcheck
+    - logcheck
 
   settings:
     custom:
@@ -70,6 +75,11 @@ go test ./...
 ## Бонусные задания
 
 ### Авто-исправление
-Реализован SuggestedFixes для
-автоматического исправления сообщений, начинающихся с заглавной буквы.
 
+Реализован SuggestedFixes для автоматического исправления сообщений, начинающихся с заглавной буквы.
+
+### Конфигурация
+
+#### Кастомные ключевые слова для чувствительных данных
+
+Кастомные ключевые слова можно указать через параметр ```sensitive-keywords``` в разделе ``settings`` в [.golangci.yml](.golangci.yml), либо через флаг ```--sensitive-keywords```. Ключевые слова указываются через запятую.

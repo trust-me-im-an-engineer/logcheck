@@ -4,9 +4,10 @@ linters:
   default: none
   enable:
     - logcheck
-
   settings:
     custom:
       logcheck:
         type: "module"
         description: Linter for log messages
+        settings:
+          sensitive-keywords: "password,key,secret,token,customSensitiveKeyword"

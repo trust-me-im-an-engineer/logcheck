@@ -5,6 +5,7 @@ import (
 	"go/token"
 	"go/types"
 	"strconv"
+	"strings"
 
 	"golang.org/x/tools/go/analysis"
 	"golang.org/x/tools/go/types/typeutil"
@@ -16,6 +17,19 @@ var Analyzer = &analysis.Analyzer{
 	Name: "logcheck",
 	Doc:  "check log messages for log/slog pkg",
 	Run:  run,
+}
+
+var config struct {
+	SensitiveKeywords string
+}
+
+func init() {
+	Analyzer.Flags.StringVar(
+		&config.SensitiveKeywords,
+		"sensitive-keywords",
+		"password,token,secret,key",
+		"comma-separated list of sensitive keywords",
+	)
 }
 
 type logRegistry struct {
@@ -66,17 +80,19 @@ var watchedLogs = map[string]logRegistry{
 	},
 }
 
-var sensitiveKeywords = map[string]struct{}{
-	"password": {},
-	"token":    {},
-	"secret":   {},
-	"key":      {},
-}
-
 func run(pass *analysis.Pass) (interface{}, error) {
+	keywordsList := strings.Split(config.SensitiveKeywords, ",")
+	sensitiveMap := make(map[string]struct{})
+	for _, kw := range keywordsList {
+		kw = strings.TrimSpace(kw)
+		if kw != "" {
+			sensitiveMap[kw] = struct{}{}
+		}
+	}
+
 	for _, file := range pass.Files {
 		ast.Inspect(file, func(n ast.Node) bool {
-			checkNode(n, pass)
+			checkNode(n, pass, sensitiveMap)
 			return true
 		})
 	}
@@ -84,7 +100,7 @@ func run(pass *analysis.Pass) (interface{}, error) {
 }
 
 // checkNode inspects one ast.Node looking for log msg
-func checkNode(n ast.Node, pass *analysis.Pass) {
+func checkNode(n ast.Node, pass *analysis.Pass, sensitiveKeywords map[string]struct{}) {
 	// Filter Call Expression
 	call, ok := n.(*ast.CallExpr)
 	if !ok {
@@ -139,7 +155,7 @@ func checkNode(n ast.Node, pass *analysis.Pass) {
 
 	// Check log arguments for sensitive names (rule 4)
 	for _, arg := range call.Args[msgPos:] {
-		checkLogArg(pass, arg)
+		checkLogArg(pass, arg, sensitiveKeywords)
 	}
 }
 
@@ -166,28 +182,28 @@ func checkLogMsg(pass *analysis.Pass, expr ast.Expr) {
 }
 
 // checkLogArg inspects log argument for sensitive names (rule 4)
-func checkLogArg(pass *analysis.Pass, arg ast.Expr) {
+func checkLogArg(pass *analysis.Pass, arg ast.Expr, sensitiveKeywords map[string]struct{}) {
 	switch a := arg.(type) {
 	case *ast.Ident:
 		// Rule 4: Check for sensitive variable names like "password"
-		checkIdentSensitiveName(pass, a)
+		checkIdentSensitiveName(pass, a, sensitiveKeywords)
 
 	case *ast.SelectorExpr:
 		// Rule 4: Check for sensitive fields like "user.Token"
-		checkIdentSensitiveName(pass, a.Sel)
+		checkIdentSensitiveName(pass, a.Sel, sensitiveKeywords)
 
 	case *ast.BinaryExpr:
 		// Recursively check concatenations
 		if a.Op == token.ADD {
-			checkLogArg(pass, a.X)
-			checkLogArg(pass, a.Y)
+			checkLogArg(pass, a.X, sensitiveKeywords)
+			checkLogArg(pass, a.Y, sensitiveKeywords)
 		}
 	}
 }
 
 // checkIdentSensitiveName inspects ident for sensitive naming
-func checkIdentSensitiveName(pass *analysis.Pass, ident *ast.Ident) {
-	if i, n := rules.FindSensitiveName(ident.Name, sensitiveKeywords); i != -1 {
+func checkIdentSensitiveName(pass *analysis.Pass, ident *ast.Ident, keywords map[string]struct{}) {
+	if i, n := rules.FindSensitiveName(ident.Name, keywords); i != -1 {
 		pass.Reportf(ident.Pos()+token.Pos(i), "potential sensitive data leak: argument contains '%s'", n)
 	}
 }
