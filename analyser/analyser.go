@@ -207,6 +207,27 @@ func checkMessage(pass *analysis.Pass, pos token.Pos, msg string) {
 
 	// Rule 1
 	if !rules.StartsWithLowercase(msg) {
-		pass.Reportf(pos+token.Pos(1), "log message should start with a lowercase letter")
+
+		// If first char is Uppercase letter suggest fix, otherwise just report
+		if msg[0] >= 'A' && msg[0] <= 'Z' {
+			pass.Report(analysis.Diagnostic{
+				Pos:     pos + 1,
+				Message: "log message should start with a lowercase letter",
+				SuggestedFixes: []analysis.SuggestedFix{
+					{
+						Message: "lowercase the first letter",
+						TextEdits: []analysis.TextEdit{
+							{
+								Pos:     pos + 1,
+								End:     pos + 2,
+								NewText: []byte{msg[0] + 32},
+							},
+						},
+					},
+				},
+			})
+		} else {
+			pass.Reportf(pos+token.Pos(1), "log message should start with a lowercase letter")
+		}
 	}
 }
