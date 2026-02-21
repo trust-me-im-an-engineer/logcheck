@@ -1,4 +1,4 @@
-package plugin
+package logcheck
 
 import (
 	"github.com/golangci/plugin-module-register/register"
