@@ -201,12 +201,12 @@ func checkMessage(pass *analysis.Pass, pos token.Pos, msg string) {
 
 	// Rules 2 and 3
 	if i := rules.IndexIllegalCharacter(msg); i != -1 {
-		pass.Reportf(pos+token.Pos(i), "log message should only contain english letters, numbers and spaces")
+		pass.Reportf(pos+token.Pos(i+1), "log message should only contain english letters, numbers and spaces")
 		return
 	}
 
 	// Rule 1
 	if !rules.StartsWithLowercase(msg) {
-		pass.Reportf(pos, "log message should start with a lowercase letter")
+		pass.Reportf(pos+token.Pos(1), "log message should start with a lowercase letter")
 	}
 }
