@@ -1,0 +1,12 @@
+version: "2"
+
+linters:
+  default: none
+  enable:
+    - logcheck
+
+  settings:
+    custom:
+      logcheck:
+        type: "module"
+        description: Linter for checking log messages
