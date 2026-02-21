@@ -11,13 +11,10 @@ func init() {
 	register.Plugin("logcheck", New)
 }
 
-// PluginWrapper — обертка, которую требует golangci-lint
 type PluginWrapper struct {
-	// здесь можно хранить настройки (Bonus Task 1)
 }
 
 func New(settings any) (register.LinterPlugin, error) {
-	// В будущем здесь можно десериализовать настройки через register.DecodeSettings
 	return &PluginWrapper{}, nil
 }
 
