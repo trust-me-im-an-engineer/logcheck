@@ -9,4 +9,4 @@ linters:
     custom:
       logcheck:
         type: "module"
-        description: Linter for checking log messages
+        description: Linter for log messages
